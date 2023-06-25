@@ -1,0 +1,124 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AppGPT.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:openAi="clr-namespace:Azure.AI.OpenAI;assembly=Azure.AI.OpenAI"
+        xmlns:models="clr-namespace:AppGPT.Models"
+        xmlns:avalonia="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
+        xmlns:system="clr-namespace:System;assembly=System.Runtime"
+        xmlns:viewModels="clr-namespace:AppGPT.ViewModels"
+        xmlns:models1="clr-namespace:AppGPT.Models"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="AppGPT.Views.MainWindow"
+        x:DataType="viewModels:MainWindowViewModel"
+        x:Name="MainWindowView"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="AppGPT">
+
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <viewModels:MainWindowViewModel />
+    </Design.DataContext>
+
+    <DockPanel>
+        <ContentControl DockPanel.Dock="Top"
+                        Content="{Binding ChatService.Exception}"
+                        HorizontalAlignment="Stretch">
+            <ContentControl.ContentTemplate>
+                <DataTemplate DataType="{x:Type system:Exception}">
+                    <Border Background="DarkRed" Padding="4">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="Close exception"
+                                    Command="{ReflectionBinding #MainWindowView.DataContext.ChatService.CloseExceptionCommand}"
+                                    VerticalAlignment="Center" />
+                            
+                            <TextBlock Text="{Binding Message}" 
+                                       TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center" />
+                        </DockPanel>
+                    </Border>
+                </DataTemplate>
+            </ContentControl.ContentTemplate>
+        </ContentControl>
+        
+        <Grid>
+            <Grid IsVisible="{Binding ChatService.IsAuthenticated}" ColumnDefinitions="* 4*">
+                <DockPanel Grid.Column="0">
+                    <Button DockPanel.Dock="Bottom"
+                            HorizontalAlignment="Stretch"
+                            CornerRadius="0" BorderThickness="0"
+                            Command="{Binding AddNewConversationCommand}"
+                            TextBlock.TextAlignment="Center"
+                            Content="New conversation" />
+
+                    <ListBox
+                        ItemsSource="{Binding ChatService.Conversations}"
+                        SelectedItem="{Binding SelectedConversation}">
+                        <ListBox.DataTemplates>
+                            <DataTemplate DataType="{x:Type models1:Conversation}">
+                                <TextBlock Text="{Binding Title}" />
+                            </DataTemplate>
+                        </ListBox.DataTemplates>
+                    </ListBox>
+                </DockPanel>
+
+                <ContentControl Grid.Column="1" Content="{Binding SelectedConversation}">
+                    <ContentControl.ContentTemplate>
+                        <DataTemplate DataType="{x:Type models1:Conversation}">
+                            <DockPanel>
+                                <TextBox DockPanel.Dock="Top"
+                                         Background="Transparent" BorderThickness="0" Margin="8"
+                                         Text="{Binding Title}" />
+
+                                <TextBox DockPanel.Dock="Bottom"
+                                         Margin="8" TextWrapping="Wrap"
+                                         Watermark="Say something"
+                                         x:CompileBindings="False"
+                                         Text="{Binding #MainWindowView.DataContext.Input}">
+                                    <TextBox.KeyBindings>
+                                        <KeyBinding Gesture="Enter"
+                                                    x:CompileBindings="False"
+                                                    Command="{Binding #MainWindowView.DataContext.SubmitInputCommand}" />
+                                    </TextBox.KeyBindings>
+                                </TextBox>
+
+                                <ScrollViewer>
+                                    <StackPanel Spacing="4">
+                                        <ItemsControl Background="Transparent" ItemsSource="{Binding Messages}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type openAi:ChatMessage}">
+                                                    <Border Padding="16 8">
+                                                        <StackPanel>
+                                                            <TextBlock Foreground="Gray" Text="{Binding Role.Label}" />
+                                                            <avalonia:MarkdownScrollViewer Markdown="{Binding Content}" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <TextBlock Text="ChatGPT is replying..." HorizontalAlignment="Center"
+                                                   IsVisible="{Binding IsAnswering}" />
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ContentControl.ContentTemplate>
+                </ContentControl>
+            </Grid>
+
+            <Grid Background="Black" IsVisible="{Binding !ChatService.IsAuthenticated}">
+                <StackPanel Spacing="4" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel Spacing="4" Orientation="Horizontal">
+                        <TextBox Text="{Binding ApiKeyInput}"
+                                 Watermark="Please input your api key"
+                                 Width="256" />
+                        <Button Content="Submit" Command="{Binding SubmitKeyInputCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</Window>
